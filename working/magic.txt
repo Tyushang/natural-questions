@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+# __author__=u"Frank Jing"
+
+
+import numpy as np
+
+from typing import *
+
+
+MAGIC_ORDER = 3
+
+
+r, o = 'r', 'o'  # red and orange
+y, w = 'y', 'w'  # yellow and white
+b, g = 'b', 'g'  # blue and green
+# magic cube gestures
+main_x = (r, o)  # x(2nd) axis, from left to right
+main_y = (y, w)  # y(1st) axis, from up to down
+main_z = (b, g)  # z(0th) axis, from out to in
+main_gesture = [main_z, main_y, main_x]
+
+main_gesture_vector = {}
+for i_ax, ax in enumerate(main_gesture):
+    for i_end, end in enumerate(ax):
+        vec = [0, 0, 0]
+        vec[i_ax] = -1 if i_end == 0 else 1
+        main_gesture_vector[end] = np.array(vec)
+
+
+def main_color_to_axis_and_position(color:str):
+    for i_axis, axis_ends in enumerate(main_gesture):
+        for i_end, end in enumerate(axis_ends):
+            if color == end:
+                return i_axis, i_end*(MAGIC_ORDER - 1)
+
+
+class Cell(object):
+    def __init__(self, x: tuple=None, y: tuple=None, z: tuple=None):
+        x = x if x is not None else ['-', '-']
+        y = y if y is not None else ['-', '-']
+        z = z if z is not None else ['-', '-']
+        self.gesture = np.array(['-', ] * 3**3).reshape([3, ] * 3)
+        self.gesture[1, 1, ::2] = x
+        self.gesture[1, ::2, 1] = y
+        self.gesture[::2, 1, 1] = z
+
+    def paint(self, axis, is_inc_dir, color):
+        idx = [1, 1, 1]
+        idx[axis] = 2 if is_inc_dir else 0
+        self.gesture[idx[0], idx[1], idx[2]] = color
+
+    def rot90_right_hand(self, stator_axis, is_inc_dir, k):
+        """rotate 90 degrees along vector(determined by stator_axis and is_ind_dir) by right hand law"""
+        rotor_axes = [0, 1, 2]
+        rotor_axes.pop(stator_axis)
+        # if stator_axis==1(y axis), should reverse one time, if decrease direction, should reverse one time.
+        reverse = (stator_axis == 1) ^ (~is_inc_dir)
+        if reverse:
+            rotor_axes.reverse()
+        self.gesture = np.rot90(self.gesture, k=k, axes=rotor_axes)
+
+    def __repr__(self):
+        x = f'[{self.gesture[1, 1, 0]},{self.gesture[1, 1, 2]}]'
+        y = f'[{self.gesture[1, 0, 1]},{self.gesture[1, 2, 1]}]'
+        z = f'[{self.gesture[0, 1, 1]},{self.gesture[2, 1, 1]}]'
+        return f'[{z},{y},{x}]'
+
+    def __str__(self):
+        return self.__repr__()
+
+
+def make_magic(*six_plain_color_seq: str):
+    """every plain color must be sequenced by stator_axis order. """
+    cells = list(map(lambda u: Cell(), range(MAGIC_ORDER**3)))
+    magic = np.array(cells).reshape([MAGIC_ORDER, ]*3)
+    # every plain of magic cube
+    for color_seq in six_plain_color_seq:
+        main_color = color_seq[len(color_seq)//2]
+        i_axis, i_pos = main_color_to_axis_and_position(main_color)
+        # every row of plain color sequence
+        for i_row, row in enumerate(color_seq.split(',')):
+            # every color(cell surface) of row
+            for i_col, color in enumerate(row):
+                idx = [i_row, i_col]
+                idx.insert(i_axis, i_pos)
+                print(idx)
+                print(magic[idx[0], idx[1], idx[2]])
+                # paint cell
+                magic[idx[0], idx[1], idx[2]].paint(i_axis, i_pos>0, color)
+
+    return magic
+
+
+def cell_distance(cell, m_gesture):
+    cell_gesture_vector = {}
+    ma_cell = np.ma.array(cell, mask=cell=='-')
+
+
+magic = make_magic(
+    'ooy,wgg,ywo',
+    'boy,roo,rry',
+    'bbb,bwb,obb',
+    'ggw,wyy,gyg',
+    'wgw,gry,wrg',
+    'ryo,obw,rrr'
+)
+
+
+
+
+def main():
+    pass
+
+
+if __name__ == '__main__':
+    main()
+
